@@ -10,3 +10,6 @@ ansible "k8s-m3" -m shell -a "hostnamectl set-hostname k8s-m3" -i k8s-hosts.ini
 ```bash
 ansible-playbook update_hosts.yml -i k8s-hosts.ini
 ```
+
+### Disable swap for kubectl
+

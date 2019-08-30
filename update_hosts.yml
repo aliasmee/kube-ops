@@ -22,3 +22,24 @@
       register: etchostsupdate
       when: ansible_hostname != "{{ item }}" or ansible_hostname == "{{ item }}"
       with_items: "{{ansible_play_hosts}}"
+
+    - name: Disable swap 
+      shell: swapoff -a
+    
+    # Another method :https://github.com/djx339/ansible-role-swapoff/blob/master/tasks/main.yml
+    - name: Disable swap permanently 
+      lineinfile:
+        path: /etc/fstab
+        state: absent
+        regexp: '(?i)^(/dev/mapper/centos-swap.*)'
+        line: '# \1'
+        backrefs: yes
+        state: present
+
+    - name: Disable permanently stop firewalld
+      systemd:
+        name: firewalld
+        state: stopped
+        enabled: no
+        daemon_reload: yes
+  
