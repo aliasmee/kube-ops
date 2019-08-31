@@ -54,3 +54,9 @@
 
     - name: Reload system sysctl
       shell: sysctl --system
+
+    - name: Enable & started kubelet
+      systemd:
+        name: kubelet
+        state: started
+        enabled: yes
