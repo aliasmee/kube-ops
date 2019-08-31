@@ -20,3 +20,19 @@ ansible-playbook -i k8s-hosts.ini 02-install_docker.yml
 ```bash
 ansible-playbook -i k8s-hosts.ini 03-install_kubelet.yml
 ```
+
+### Setup & install haproxy
+
+* download haproxy roles
+```bash
+ansible-galaxy install geerlingguy.haproxy -p .
+```
+
+* setup hostname
+```bash
+ansible "haproxy*" -m shell -a "hostnamectl set-hostname haproxy1" -i k8s-hosts.ini
+```
+
+* install haproxy to target hosts
+```bash
+
