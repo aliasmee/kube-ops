@@ -35,4 +35,5 @@ ansible "haproxy*" -m shell -a "hostnamectl set-hostname haproxy1" -i k8s-hosts.
 
 * install haproxy to target hosts
 ```bash
-
+ansible-playbook -i k8s-hosts.ini 04-install_haproxy.yml
+```
