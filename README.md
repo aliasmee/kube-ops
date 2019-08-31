@@ -37,3 +37,10 @@ ansible "haproxy*" -m shell -a "hostnamectl set-hostname haproxy1" -i k8s-hosts.
 ```bash
 ansible-playbook -i k8s-hosts.ini 04-install_haproxy.yml
 ```
+
+### Use kubeadm init cluster master control plan
+
+* Init first master
+```bash
+ansible-playbook 05-config-master.yml -i k8s-hosts.ini
+```

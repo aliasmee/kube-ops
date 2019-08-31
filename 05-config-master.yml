@@ -1,0 +1,26 @@
+---
+- name: Config Kubernetes Master compoents
+  hosts: k8s-m1
+  gather_facts: no
+  tasks:
+    - name: Create kubeadm config yml
+      shell:
+        cmd: |
+          cat <<EOF > kubeadm-config.yaml
+          apiVersion: kubeadm.k8s.io/v1beta2
+          kind: ClusterConfiguration
+          kubernetesVersion: 1.15.3
+          controlPlaneEndpoint: "haproxy1:8443"
+          networking:
+            podSubnet: 10.244.0.0/16
+          EOF
+      args:
+        executable: /bin/bash
+
+    - name: Init first master control plan
+      shell: kubeadm init --config=kubeadm-config.yaml --upload-certs | grep -A1000 "successfully"
+      register: kubeadm_init_result
+
+    - debug: var=kubeadm_init_result.stdout_lines
+      when: kubeadm_init_result.stdout != ""
+      

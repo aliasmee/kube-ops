@@ -1,6 +1,6 @@
 ---
 - name: Setup install kubelet
-  hosts: k8s-cluster
+  hosts: k8s-m*
   gather_facts: no
   tasks:
 #      shell:
@@ -60,3 +60,14 @@
         name: kubelet
         state: started
         enabled: yes
+
+    - name: Get current docker cgourps
+      shell: "docker info | grep -i cgroupfs| cut -d' ' -f4"
+      register: docker_info
+
+    - name: Config kubelet args
+      lineinfile:
+        path: /etc/sysconfig/kubelet
+        state: present
+        regexp: '^KUBELET_EXTRA_ARGS='
+        line: 'KUBELET_EXTRA_ARGS="--cgroup-driver={{ docker_info.stdout }} --pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google_containers/pause-amd64:3.1"'
