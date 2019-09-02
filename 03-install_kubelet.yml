@@ -1,6 +1,6 @@
 ---
 - name: Setup install kubelet
-  hosts: k8s-m*
+  hosts: k8s-[m-n]*
   gather_facts: no
   tasks:
 #      shell:

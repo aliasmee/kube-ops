@@ -1,5 +1,5 @@
 ---
-- hosts: k8s-*
+- hosts: k8s-[m-n]*
   become: True
   gather_facts: True
   tasks:
