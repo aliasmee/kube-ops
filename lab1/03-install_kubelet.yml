@@ -1,0 +1,73 @@
+---
+- name: Setup install kubelet
+  hosts: k8s-[m-n]*
+  gather_facts: no
+  tasks:
+#      shell:
+#        cmd: |
+#          cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+#          [kubernetes]
+#          name=Kubernetes
+#          baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+#          enabled=1
+#          gpgcheck=1
+#          repo_gpgcheck=1
+#          gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+#          EOF
+#      args:
+#        executable: /bin/bash
+
+    - name: Setup kubernetes repo
+      yum_repository:
+        name: 'kubernetes'
+        description: 'Kubernetes'
+        #baseurl: 'https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64'
+        baseurl: 'http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64'
+        enabled: yes
+        gpgcheck: yes
+        #gpgkey: 'https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg'
+        gpgkey: 'http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg'
+        repo_gpgcheck: yes
+
+    - name: Disable selinux
+      selinux:
+        state: disabled
+
+    - name: Install kubelet & kubeadmin
+      yum:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        disable_excludes: 'kubernetes'
+
+    - name: Disable some sysctl
+      shell:
+        cmd: |
+          cat <<EOF >  /etc/sysctl.d/k8s.conf
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+          EOF
+      args:
+        executable: /bin/bash
+
+    - name: Reload system sysctl
+      shell: sysctl --system
+
+    - name: Enable & started kubelet
+      systemd:
+        name: kubelet
+        state: started
+        enabled: yes
+
+    - name: Get current docker cgourps
+      shell: "docker info | grep -i cgroupfs| cut -d' ' -f4"
+      register: docker_info
+
+    - name: Config kubelet args
+      lineinfile:
+        path: /etc/sysconfig/kubelet
+        state: present
+        regexp: '^KUBELET_EXTRA_ARGS='
+        line: 'KUBELET_EXTRA_ARGS="--cgroup-driver={{ docker_info.stdout }} --pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google_containers/pause-amd64:3.1"'

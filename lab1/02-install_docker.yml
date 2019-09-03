@@ -1,0 +1,30 @@
+---
+- hosts: k8s-[m-n]*
+  become: True
+  gather_facts: True
+  tasks:
+    - name: Install Docker use Official documents
+      yum:
+        name:
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+  
+    - name: Setup stable repository
+      shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  
+    - name: Install special docker version
+      yum:
+        name:
+          - docker-ce-{{ docker_version }}
+          - docker-ce-cli-{{ docker_version }}
+          - containerd.io
+      vars:
+        docker_version: 19.03.0
+  
+    - name: Start docker engine & auto start on boot
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+        daemon_reload: yes
