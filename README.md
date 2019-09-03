@@ -299,3 +299,9 @@ kube-proxy-ddczx                 0/1     ErrImagePull       0          16m     1
 
 解决方式：
 先把kube-proxy 以及kube-flannel的镜像拉到node节点上，等两个pod都正常running之后。创建的测试pod就可以使用了。
+
+### 参考官网
+
+1. [Install kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)
+2. [high-availability](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/)
+3. [Creating a single control-plane cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)
