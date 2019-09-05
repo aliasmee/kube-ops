@@ -11,6 +11,7 @@
           kind: ClusterConfiguration
           kubernetesVersion: 1.15.3
           controlPlaneEndpoint: "haproxy1:8443"
+          clusterName: zhulu-office-k8s
           networking:
             podSubnet: 10.244.0.0/16
           EOF
