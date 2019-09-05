@@ -316,7 +316,7 @@ rules:
 ```
 OR
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/aliasmee/kube-ops/lab3/readonly-cluster-roles.yml
+kubectl apply -f https://raw.githubusercontent.com/aliasmee/kube-ops/master/lab3/readonly-cluster-roles.yml
 ```
 
 If you want to create a user and have the above permissions, create a clusterrolebindings binding to a user.
