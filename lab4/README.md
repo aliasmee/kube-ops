@@ -23,16 +23,19 @@ LoadBalancer类型可以给每个服务配置一个公网IP，但考虑IPV4的�
 而Ingress 只需要一个公网IP，即可以将所有服务通过Hosts、path开放到外部。这就需要搭配Ingress-controller来实现了。Ingress-controller
 还可以做SSL的卸载功能. 
 
+Ingress 的另外一个作用是为了选择svc，但客户端的请求，到了ingress controller时，controller会直接连接该Service中的Pod，而不会和Service（vip）
+通信！！
+
 ```bash
 
                            kubia.example.com      --------                  ------
                          / ---------------------> SVC kubia  ------------->  Pod
 --------        --------/                         --------                  ------
  client  ---->   Ingress
---------        --------\                         --------
-                         \ ---------------------> SVC hi                    ------
-                           hi.example.com         --------   ------------->  Pod
-                                                                            ------
+--------        --------\                         --------                  ------
+                         \ ---------------------> SVC hi     ------------->  Pod     
+                           hi.example.com         --------                  ------   
+                                                             
 ```
 
 
@@ -238,7 +241,13 @@ You've hit kubia-xfv76
 
 e.g.: `curl -H "Host: kubia.example.com" http://172.16.192.50`
 
+
 ### Install Traefik ingress
+
+在用了Nginx作为ingress controller后，我们来看下另外一个controller实现，也是社区比较活跃的一个项目Traefik。
+
+简单的介绍下，Traefik是一款开源的云原生的边缘路由器（HTTP负载均衡、反向代理）。提供Auto Discovery、Tracing、Metric。可以与众多平台集成。
+如Kubernetes、DockerSwarm、Rancher、Mesos。另外Traefik除了社区版，也提供企业版TraefikEE，付费服务。
 
 ```bash
 helm upgrade traefik azure-mirr/traefik --namespace kube-system --set rbac.enabled=true --set dashboard.enabled=true,dashboard.auth.basic.test='$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/' --set dashboard.domain=tk.example.com
