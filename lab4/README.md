@@ -304,6 +304,8 @@ spec:
 EOF
 ```
 
+##### 验证下
+
 还是之前的验证方法，通过curl客户端，或者修改hosts后，用浏览器访问.
 
 ```bash
@@ -313,22 +315,29 @@ You've hit kubia-qk2s9
 
 OK，看到上面的输出，已经表明traefik controller正常工作了。
 
-traefik还提供了dashboard,供你直观的看到Ingress服务资源。在第一步安装的时候，我们已经创建好了一个Ingress，访问traefik.example.com，
-默认这个ingress已经加了annotation注释，使用traefik作为ingress class，我们可以直接使用浏览器访问，前提是要通过添加一条hosts记录。
+另外traefik还提供了dashboard,可以直观的看到Ingress服务资源以及运行状态。
+
+在第一步安装的时候，我们已经创建好了一个Ingress，访问traefik.example.com，默认这个ingress已经加了annotation注释，
+使用traefik作为ingress class，我们可以直接使用浏览器访问，前提是要通过添加一条hosts记录。
 
 默认的用户名/密码：test/test
 
-Notes: 
+`Notes: 如果你本机装了helm，也可以使用下面的命令:`
 
-如果你本机装了helm，也可以使用下面的命令。
 ```bash
 helm upgrade traefik azure-mirr/traefik --namespace kube-system --set rbac.enabled=true --set dashboard.enabled=true,dashboard.auth.basic.test='$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/' --set dashboard.domain=tk.example.com
 ```
 
 
+### 回顾
+
+本篇主要介绍了Ingress 的作用原理、优势，以及如何搭配开源ingress controller 项目，使其Ingress资源正常完美工作。
+
+nginx的特点稳定、上手快。traefik的特点是云原生，golang开发。性能堪比nginx。扩展性高。
+
 ### Q&A
 
-1. 如果我的集群有多个ingress controller，如何根据需要选择不同的controller呢？
+* 如果我的集群有多个ingress controller，如何根据需要选择不同的controller呢？
 
 我们可以通过在Ingress资源中添加annotation: `kubernetes.io/ingress.class: nginx`. 因为每个Ingress-controller都有自己的标签。
 
@@ -348,3 +357,10 @@ spec:
 ```
 
 
+* Nginx 默认是监听整个集群的Ingress资源的增删改查，这样在资源特别多的情况下，会不会影响性能？
+
+我觉得会有那么点影响的。nginx controller 支持监控指定namespace下的ingress资源。通过在启动时添加一行参数：
+
+```bash
+-watch-namespace=${NAMESPACE}
+```
