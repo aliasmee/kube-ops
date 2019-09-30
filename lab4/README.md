@@ -39,10 +39,10 @@ Ingress 的另外一个作用是为了选择svc，但客户端的请求，到了
 ```
 
 
-### Choice one Ingress Controller
+### Choice Ingress Controller
 
 Ingress Controller 的种类变得越来越多。我记得刚开始时也只有Nginx、Traefik、Kong。现在的种类
-已经发展十多种了。具体可转到这里查看[Kubernetes Ingress Controller List](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/#additional-controllers)
+已经发展十多种了。具体可转到这里查看[Kubernetes Ingress Controller List](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/#additional-controllers).
 
 由于时间有限，只探索以下两种Ingress Controller哈：
 
@@ -55,17 +55,21 @@ Nginx Web服务器已经在领域内占有Top1 的地位，所以我们就先从
 
 Nginx controller 目前有两个主流版本，一个主要由Nginx官方维护[Nginx.Inc](https://github.com/nginxinc/kubernetes-ingress),
 另外一个是Kubernetes 社区在维护的[Kubernetes ingress nginx](https://github.com/kubernetes/ingress-nginx/).
+
 至于选哪个？可以看下对比[VS](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/nginx-ingress-controllers.md).
 
-另外有些功能，在社区维护的版本中是支持的，到了Nginx官方维护的有只有付费Plus版本提供。本文介绍的是Kubernetes社区版本的ingress-nginx。
+另外有些功能，在社区维护的版本中是支持的，到了Nginx官方维护的有只有付费Plus版本提供。
+
+本文介绍的是Kubernetes社区版本的ingress-nginx。
 
 
 ##### Ingress nginx 安装
 
-先准备好必备条件:
+在启用RBAC授权的集群中，我们需要预先创建一系列Role/ClusterRole，这样nginx-ingress 服务才能正确与Kubernetes API Server通信，主要用于监视Ingress资源；
 
-在启用RBAC授权的集群中，需要预先创建一系列role，这样nginx-ingress 服务才能与Kubernetes API Server通信，用于监视Ingress资源；最后是创建
-Nginx Server。
+最后是创建 Nginx Controller Server。
+
+通过社区给的文件，我们直接创建。感兴趣的可以直接访问这个URL，看下具体都创建了哪些资源。
 
 ```bash
 # kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
@@ -81,8 +85,11 @@ clusterrolebinding.rbac.authorization.k8s.io/nginx-ingress-clusterrole-nisa-bind
 deployment.apps/nginx-ingress-controller created
 ```
 
-创建4层Service，类型为LoadBalancer. 如果你的基础设施在云上，那么可以很方便的调用云供应商提供的LB。我这里使用的是自建的
-LB方案项目，[Metallb](https://metallb.universe.tf/). 部署及使用，我会写在另外一篇文章中[How to build LoadBalancer on bare machine](https://aliasmee.github.io/)
+创建Service，类型为LoadBalancer. 
+
+如果你的基础设施在云上，那么可以很方便的调用云供应商提供的LB。我这里使用的是自建的
+LB方案项目，[Metallb](https://metallb.universe.tf/). 部署及使用，会写在另外一篇文章中[How to build LoadBalancer on bare machine](https://aliasmee.github.io/)
+
 使用该项目，我们就可以很方便的创建LB类型的Service。不用考虑NodePort的方式去暴露服务。
 
 ```bash
@@ -124,26 +131,27 @@ I0915 14:47:36.983031       1 controller.go:158] Initial sync, sleeping for 1 se
 
 部署一个简单的服务，这里的服务参考Kubernetes in action中第五章的示例：
 
-创建一个rc，提供http服务:
+先创建一个Namespace，方便后面清理。
 
 ```bash
  kubectl create ns ingress-ec
 ```
 
-创建ReplicaSets
+创建ReplicaSets,  该RS中的pod提供http服务:
 
 ```bash
 kubectl apply -f - <<EOF
 
-apiVersion: v1
-kind: ReplicationController
+apiVersion: apps/v1
+kind: ReplicaSet
 metadata:
   name: kubia
   namespace: ingress-ec
 spec:
   replicas: 3
   selector:
-    app: kubia
+    matchLabels:
+      app: kubia
   template:
     metadata:
       labels:
@@ -190,8 +198,14 @@ spec:
 EOF
 ```
 
-最后是创建Ingress 资源。定义访问Host为kubia.example.com，且访问Path为/（根）, 匹配上面的条件之后，将流量转发到
-kubia-svc。这里也可以看出, Ingress 资源可以定义根据请求中不同的host 或path ，将流量转发到集群任意服务。
+最后是创建Ingress 资源。定义访问Host为`kubia.example.com`，且访问Path为`/`（根）, 匹配上面的条件之后，将流量转发到
+kubia-svc。
+
+这里也可以看出, Ingress 资源可以定义根据请求中不同的host 或同一Hosts中的不同path ，将流量转发到集群任意的后端服务。划分为：
+
+* 基于域名hosts的路由转发
+* 基于URL请求路径的路由转发
+* ...
 
 ```bash
 kubectl apply -f - <<EOF
@@ -228,7 +242,7 @@ kubia   kubia.example.com   172.16.192.50   80      17m
 # sudo echo "172.16.192.50  kubia.example.com" >> /etc/hosts 
 ```
 
-##### 本地验证下
+##### 本地终端验证下
 
 ```bash
 # for i in `seq 3`; do curl kubia.example.com;done
@@ -237,18 +251,76 @@ You've hit kubia-k59v5
 You've hit kubia-xfv76
 ```
 
-如果你不想修改hosts，也可以在使用curl时，添加Host Header.
+如果你不想修改hosts，也可以在测试时使用curl，添加Host Header.
 
 e.g.: `curl -H "Host: kubia.example.com" http://172.16.192.50`
 
 
 ### Install Traefik ingress
 
-在用了Nginx作为ingress controller后，我们来看下另外一个controller实现，也是社区比较活跃的一个项目Traefik。
+在用了Nginx作为ingress controller后，我们来看下另外一个controller实现，也是社区比较活跃的一个项目[Traefik](https://github.com/containous/traefik)。
 
-简单的介绍下，Traefik是一款开源的云原生的边缘路由器（HTTP负载均衡、反向代理）。提供Auto Discovery、Tracing、Metric。可以与众多平台集成。
-如Kubernetes、DockerSwarm、Rancher、Mesos。另外Traefik除了社区版，也提供企业版TraefikEE，付费服务。
+简单的介绍下，Traefik是一款开源的云原生的边缘路由器（HTTP负载均衡、反向代理）。提供的功能如Auto Discovery、Tracing、Metric。并且也支持与众多平台集成工作。
+如Kubernetes、DockerSwarm、Rancher、Mesos。
 
+另外Traefik除了社区版，也提供企业版TraefikEE，付费服务。
+
+
+安装Traefik controller
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/aliasmee/kube-ops/master/lab4/traefik-mandatory.yaml
+```
+
+如果一切就绪之后，查看Traefik创建的LB IP地址。
+
+```bash
+# kubectl get svc -ningress-traefik
+NAME                TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                      AGE
+traefik             LoadBalancer   10.107.135.125   172.16.192.51   80:32323/TCP,443:30231/TCP   86m
+```
+
+我们依旧使用上一部分Nginx时用到的kubia服务。修改下原kubia 的ingress，添加一条annotation，将ingress class指向traefik controller：
+
+```bash
+kubectl apply -f - <<EOF
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: traefik
+  name: kubia
+  namespace: ingress-ec
+spec:
+  rules:
+  - host: kubia.example.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kubia-svc
+          servicePort: 80
+EOF
+```
+
+还是之前的验证方法，通过curl客户端，或者修改hosts后，用浏览器访问.
+
+```bash
+curl -H "Host: kubia.example.com" http://172.16.192.51
+You've hit kubia-qk2s9
+```
+
+OK，看到上面的输出，已经表明traefik controller正常工作了。
+
+traefik还提供了dashboard,供你直观的看到Ingress服务资源。在第一步安装的时候，我们已经创建好了一个Ingress，访问traefik.example.com，
+默认这个ingress已经加了annotation注释，使用traefik作为ingress class，我们可以直接使用浏览器访问，前提是要通过添加一条hosts记录。
+
+默认的用户名/密码：test/test
+
+Notes: 
+
+如果你本机装了helm，也可以使用下面的命令。
 ```bash
 helm upgrade traefik azure-mirr/traefik --namespace kube-system --set rbac.enabled=true --set dashboard.enabled=true,dashboard.auth.basic.test='$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/' --set dashboard.domain=tk.example.com
 ```
