@@ -36,9 +36,9 @@
     - name: Install kubelet & kubeadmin
       yum:
         name:
-          - kubelet
-          - kubeadm
-          - kubectl
+          - kubelet-1.15.3
+          - kubeadm-1.15.3
+          - kubectl-1.15.3
         state: present
         disable_excludes: 'kubernetes'
 
