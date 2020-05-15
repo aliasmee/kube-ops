@@ -19,6 +19,13 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods
+  - pods/exec
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
   - configmaps
   - endpoints
   - persistentvolumeclaims
