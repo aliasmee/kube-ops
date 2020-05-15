@@ -272,7 +272,7 @@ kubectl delete node node_name
 
 On Deleted Worker node:
 ```bash
-kubectl reset
+kubeadm reset
 ip link delete cni0
 ip link delete flannel.1
 ```
@@ -299,6 +299,46 @@ kube-proxy-ddczx                 0/1     ErrImagePull       0          16m     1
 
 解决方式：
 先把kube-proxy 以及kube-flannel的镜像拉到node节点上，等两个pod都正常running之后。创建的测试pod就可以使用了。
+
+3. 错误2 日期混乱
+
+发现某些pod的时间有些混乱，比如下面的例子
+```bash
+[root@k8s-m1 ~]# kubectl get pod -l run=nginx-test
+NAME                         READY   STATUS    RESTARTS   AGE
+nginx-test-c75cd8c96-hptjh   1/1     Running   0          21m
+nginx-test-c75cd8c96-v622k   1/1     Running   0          21m
+[root@k8s-m1 ~]# kubectl get pod -l run=nginx-test
+NAME                         READY   STATUS    RESTARTS   AGE
+nginx-test-c75cd8c96-hptjh   1/1     Running   0          7m2s
+nginx-test-c75cd8c96-v622k   1/1     Running   0          7m2s
+```
+可以看出，每次运行这个服务的容器创建时间都不稳定。经过排查之后，先确定下集群主机节点上的时间、时区，是否一致。
+
+```bash
+k8s-n1 | CHANGED | rc=0 >>
+Fri May 15 16:24:42 CST 2020
+k8s-m3 | CHANGED | rc=0 >>
+Fri May 15 16:31:43 CST 2020
+k8s-m2 | CHANGED | rc=0 >>
+Fri May 15 16:17:01 CST 2020
+haproxy1 | CHANGED | rc=0 >>
+Fri May 15 16:17:04 CST 2020
+k8s-m1 | CHANGED | rc=0 >>
+Fri May 15 16:31:43 CST 2020
+k8s-n2 | CHANGED | rc=0 >>
+Fri May 15 16:24:15 CST 2020
+```
+
+最后发现k8s集群master节点有时间不一致的现象。相差时间也是14分钟。刚好和之前容器看到的差异一样。仔细想想，可能是之前有master节点被关机太久了。时间没同步导致的。
+因为`etcd`是运行在每个master节点上的，而APIserver是通过`haproxy`轮询负载到后面的3台master主机上。所以导致了kubectl查看时的混乱现象。
+
+重新同步下集群时间解决
+```bash
+ansible "all" -m shell -a "date -s 16:48:30" -i k8s-hosts.ini
+```
+
+
 
 ### 参考官网
 
